@@ -1,0 +1,223 @@
+{
+  "name": "appointment cancellation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cancel",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -160,
+        80
+      ],
+      "id": "6da1f058-bd81-40c0-9c30-d9f9af80c18d",
+      "name": "get cancellation request"
+    },
+    {
+      "parameters": {
+        "url": "https://api.cal.com/v2/bookings?limit=50",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "upcoming"
+            },
+            {
+              "name": "attendeeEmail",
+              "value": "={{ $json.body.args.email }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "cal-api-version",
+              "value": "2026-05-01"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_CAL_API_KEY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        64,
+        80
+      ],
+      "id": "ec874ab9-3753-4fc4-b631-c1f84c8dd20c",
+      "name": "find booking"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "29eb3941-ccb8-4dbe-b045-52d7224e7f12",
+              "leftValue": "={{ $json.data }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        288,
+        80
+      ],
+      "id": "33a0cc94-2fb1-44d6-a6d3-da8d2ea24e7b",
+      "name": "booking exists?"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "No bookings under this email is found , please verify and give me the correct email to proceed.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        512,
+        176
+      ],
+      "id": "7687a556-2e4b-4a15-a40c-dc910c7fe3ce",
+      "name": "booking doesn't exist"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.cal.com/v2/bookings/{{ $json.data[0].uid }}/cancel",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "cal-api-version",
+              "value": "2026-02-25"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_CAL_API_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "cancellationReason",
+              "value": "={{ $('get cancellation request').item.json.body.args.reason }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        512,
+        -16
+      ],
+      "id": "470337cd-8932-4537-a6c0-b7e39bf4858a",
+      "name": "cancel meeting"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "Your appointment has been canceled.Thank you.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        736,
+        -16
+      ],
+      "id": "30a2d266-99fc-40eb-941e-0d5e68d90938",
+      "name": "meeting cancelled"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "get cancellation request": {
+      "main": [
+        [
+          {
+            "node": "find booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "find booking": {
+      "main": [
+        [
+          {
+            "node": "booking exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "booking exists?": {
+      "main": [
+        [
+          {
+            "node": "cancel meeting",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "booking doesn't exist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "cancel meeting": {
+      "main": [
+        [
+          {
+            "node": "meeting cancelled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
